@@ -106,8 +106,8 @@ export default function AdminLoginScreen({ onLogin }: AdminLoginScreenProps) {
           {/* Demo Info */}
           <div className="bg-gray-50 rounded-lg p-4 text-sm text-gray-600">
             <p className="font-semibold mb-2">Demo Credentials:</p>
-            <p>Email: <span className="font-mono">admin@applaza.com</span></p>
-            <p>Password: <span className="font-mono">admin123</span></p>
+            <p>Email: <span className="font-mono">admin@applaza.au</span></p>
+            <p>Password: <span className="font-mono">admin1234</span></p>
           </div>
         </div>
       </div>
