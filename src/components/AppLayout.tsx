@@ -76,11 +76,29 @@ export default function AppLayout() {
   };
 
   return (
-    <div className="flex min-h-screen bg-black">
-      <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
-      <main className="flex-1 p-8 overflow-y-auto">
-        {renderView()}
-      </main>
+    <div className="flex flex-col min-h-screen bg-black">
+      <div className="flex flex-1">
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} />
+        <main className="flex-1 p-8 overflow-y-auto">
+          {renderView()}
+        </main>
+      </div>
+      
+      
+      {/* Footer */}
+      <div className="bg-black border-t border-gray-800 py-6 px-6">
+        <p className="text-center text-gray-400 text-sm">
+          © 2025 Applaza. Powered by{' '}
+          <a 
+            href="https://nexadigital.com.au" 
+            target="_blank" 
+            rel="noopener noreferrer"
+            className="text-white hover:text-gray-300 transition-colors font-medium"
+          >
+            Nexa Digital
+          </a>
+        </p>
+      </div>
     </div>
   );
 }
