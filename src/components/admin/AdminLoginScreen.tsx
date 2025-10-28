@@ -44,12 +44,7 @@ export default function AdminLoginScreen({ onLogin }: AdminLoginScreenProps) {
         <div className="bg-white rounded-2xl shadow-2xl p-8 space-y-6">
           {/* Logo */}
           <div className="flex justify-center">
-            <div className="relative">
-              <ShoppingBag className="w-16 h-16 text-black" strokeWidth={1.5} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl font-bold text-black">A</span>
-              </div>
-            </div>
+            <img src="/login.png" alt="Applaza Logo" className="w-32 h-16" />
           </div>
 
           {/* Title */}
