@@ -18,60 +18,61 @@ import SettingsView from '@/components/admin/SettingsView';
 import AdminLoginScreen from '@/components/admin/AdminLoginScreen';
 import { supabase } from '@/lib/supabase';
 
+// Check if a Supabase user object has the admin role
+// app_metadata is set server-side only (via DB trigger / SQL) — clients cannot spoof it
+const isAdmin = (user: any): boolean =>
+  user?.app_metadata?.role === 'admin';
+
 export default function AppLayout() {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check for existing session
+    // Check existing session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {
-      setIsAuthenticated(!!session);
+      setAuthenticated(!!session && isAdmin(session.user));
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Keep in sync on auth changes (sign in / sign out / token refresh)
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
+      setAuthenticated(!!session && isAdmin(session.user));
     });
 
     return () => subscription.unsubscribe();
   }, []);
 
-  const handleLogin = () => {
-    setIsAuthenticated(true);
-  };
-
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-black">
-        <div className="text-white text-xl">Loading...</div>
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="w-6 h-6 border-2 border-white/20 border-t-white rounded-full animate-spin" />
       </div>
     );
   }
 
-  if (!isAuthenticated) {
-    return <AdminLoginScreen onLogin={handleLogin} />;
+  if (!authenticated) {
+    return <AdminLoginScreen onLogin={() => setAuthenticated(true)} />;
   }
 
   const renderView = () => {
     switch (activeTab) {
-      case 'dashboard': return <DashboardView />;
-      case 'users': return <UsersView />;
-      case 'creators': return <CreatorsView />;
-      case 'brands': return <BrandsView />;
-      case 'products': return <ProductsView />;
-      case 'videos': return <VideosView />;
-      case 'livestreams': return <LivestreamsView />;
-      case 'orders': return <OrdersView />;
-      case 'payments': return <PaymentsView />;
+      case 'dashboard':  return <DashboardView />;
+      case 'users':      return <UsersView />;
+      case 'creators':   return <CreatorsView />;
+      case 'brands':     return <BrandsView />;
+      case 'products':   return <ProductsView />;
+      case 'videos':     return <VideosView />;
+      case 'livestreams':return <LivestreamsView />;
+      case 'orders':     return <OrdersView />;
+      case 'payments':   return <PaymentsView />;
       case 'want-teams': return <WantTeamsView />;
-      case 'gamification': return <GamificationView />;
+      case 'gamification':return <GamificationView />;
       case 'adventures': return <AdventuresView />;
-      case 'ai': return <AIView />;
+      case 'ai':         return <AIView />;
       case 'moderation': return <ModerationView />;
-      case 'settings': return <SettingsView />;
-      default: return <DashboardView />;
+      case 'settings':   return <SettingsView />;
+      default:           return <DashboardView />;
     }
   };
 
@@ -83,18 +84,11 @@ export default function AppLayout() {
           {renderView()}
         </main>
       </div>
-      
-      
-      {/* Footer */}
       <div className="bg-black border-t border-gray-800 py-6 px-6">
         <p className="text-center text-gray-400 text-sm">
-          © 2025 Applaza. Powered by{' '}
-          <a 
-            href="https://nexadigital.com.au" 
-            target="_blank" 
-            rel="noopener noreferrer"
-            className="text-white hover:text-gray-300 transition-colors font-medium"
-          >
+          © 2026 Applaza. Powered by{' '}
+          <a href="https://nexadigital.com.au" target="_blank" rel="noopener noreferrer"
+            className="text-white hover:text-gray-300 transition-colors font-medium">
             Nexa Digital
           </a>
         </p>

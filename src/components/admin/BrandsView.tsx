@@ -1,187 +1,239 @@
-import { useState } from "react";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search } from "lucide-react";
-import BrandCard from "./BrandCard";
-import BrandProfileModal from "./BrandProfileModal";
+import { useState, useEffect, useRef } from "react";
+import { Search, RefreshCw, CheckCircle, XCircle, BadgeCheck, ChevronDown } from "lucide-react";
+import { supabase } from "@/lib/supabase";
+import { toast } from "sonner";
+
+interface Brand {
+  id: string;
+  user_id: string;
+  name: string;
+  bio: string | null;
+  logo_url: string | null;
+  category: string | null;
+  status: 'pending' | 'active' | 'suspended';
+  verified: boolean;
+  subscriber_count: number;
+  stripe_onboarding_complete: boolean;
+  created_at: string;
+}
+
+const STATUS_CONFIG = {
+  active:    { label: 'Active',    bg: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20', dot: 'bg-emerald-400' },
+  pending:   { label: 'Pending',   bg: 'text-amber-400 bg-amber-500/10 border-amber-500/20',       dot: 'bg-amber-400'   },
+  suspended: { label: 'Suspended', bg: 'text-red-400 bg-red-500/10 border-red-500/20',             dot: 'bg-red-400'     },
+};
 
 export default function BrandsView() {
+  const [brands, setBrands] = useState<Brand[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedBrand, setSelectedBrand] = useState<any>(null);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const brands = [
-    {
-      id: "1",
-      name: "Nike",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492086663_a6fabe24.webp",
-      followers: "2.4M",
-      following: "127",
-      likes: "18.5M",
-      videos: 342,
-      products: 1247,
-      verified: true,
-      status: "active",
-      bio: "Just Do It. Official Nike account featuring the latest sneakers, apparel, and athlete stories.",
-      videoList: [
-        { id: "v1", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492096846_c74fd6c1.webp", title: "Air Jordan Launch", views: "1.2M", likes: "89K" },
-        { id: "v2", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492098545_529ad783.webp", title: "Running Collection", views: "890K", likes: "67K" },
-        { id: "v3", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492100291_57cd90e0.webp", title: "Athlete Series", views: "2.1M", likes: "156K" },
-      ],
-      productList: [
-        { id: "p1", name: "Air Jordan 1 High", price: "170", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492096846_c74fd6c1.webp" },
-        { id: "p2", name: "Air Max 270", price: "150", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492098545_529ad783.webp" },
-        { id: "p3", name: "React Infinity", price: "160", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492100291_57cd90e0.webp" },
-      ]
-    },
-    {
-      id: "2",
-      name: "Adidas",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492087388_63a708cb.webp",
-      followers: "1.8M",
-      following: "89",
-      likes: "12.3M",
-      videos: 278,
-      products: 892,
-      verified: true,
-      status: "active",
-      bio: "Impossible is Nothing. Official Adidas showcasing performance sportswear and lifestyle collections.",
-      videoList: [
-        { id: "v4", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492101024_287ea5c5.webp", title: "Ultraboost Launch", views: "780K", likes: "52K" },
-        { id: "v5", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492102883_efb324b3.webp", title: "Originals Drop", views: "1.1M", likes: "78K" },
-        { id: "v6", thumbnail: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492104585_cb384a4d.webp", title: "Sport Collection", views: "650K", likes: "41K" },
-      ],
-      productList: [
-        { id: "p4", name: "Ultraboost 22", price: "180", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492101024_287ea5c5.webp" },
-        { id: "p5", name: "NMD R1", price: "140", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492102883_efb324b3.webp" },
-        { id: "p6", name: "Stan Smith", price: "90", image: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492104585_cb384a4d.webp" },
-      ]
-    },
-    {
-      id: "3",
-      name: "Apple",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492088207_e6098be5.webp",
-      followers: "3.1M",
-      following: "45",
-      likes: "24.7M",
-      videos: 156,
-      products: 234,
-      verified: true,
-      status: "active",
-      bio: "Think Different. Official Apple showcasing innovative technology and design.",
-      videoList: [],
-      productList: []
-    },
-    {
-      id: "4",
-      name: "Sephora",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492089895_dbe0240d.webp",
-      followers: "1.2M",
-      following: "234",
-      likes: "9.8M",
-      videos: 523,
-      products: 3421,
-      verified: true,
-      status: "active",
-      bio: "Beauty for all. Discover makeup, skincare, and fragrance from top brands.",
-      videoList: [],
-      productList: []
-    },
-    {
-      id: "5",
-      name: "Samsung",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492090608_da65265e.webp",
-      followers: "2.7M",
-      following: "67",
-      likes: "16.4M",
-      videos: 289,
-      products: 567,
-      verified: true,
-      status: "active",
-      bio: "Do What You Can't. Explore cutting-edge smartphones, TVs, and home appliances.",
-      videoList: [],
-      productList: []
-    },
-    {
-      id: "6",
-      name: "Zara",
-      logo: "https://d64gsuwffb70l.cloudfront.net/68fe39e34c92140cfe42b366_1761492091326_6a3cf2ac.webp",
-      followers: "980K",
-      following: "156",
-      likes: "7.2M",
-      videos: 412,
-      products: 2134,
-      verified: true,
-      status: "active",
-      bio: "Fashion that inspires. Latest trends in clothing, shoes, and accessories.",
-      videoList: [],
-      productList: []
+  useEffect(() => { fetchBrands(); }, []);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setOpenDropdown(null);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const fetchBrands = async () => {
+    setLoading(true);
+    setFetchError(null);
+    const { data, error } = await supabase
+      .from('brands')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      setFetchError(error.message);
+      toast.error('Failed to load brands: ' + error.message);
+    } else {
+      setBrands(data || []);
     }
-  ];
+    setLoading(false);
+  };
 
-  const filteredBrands = brands.filter(brand => {
-    const matchesSearch = brand.name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || brand.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const updateStatus = async (brandId: string, newStatus: Brand['status']) => {
+    setUpdatingId(brandId);
+    setOpenDropdown(null);
+    const { error } = await supabase.from('brands').update({ status: newStatus }).eq('id', brandId);
+    if (error) { toast.error('Update failed: ' + error.message); }
+    else {
+      setBrands(prev => prev.map(b => b.id === brandId ? { ...b, status: newStatus } : b));
+      toast.success(`Status set to ${newStatus}`);
+    }
+    setUpdatingId(null);
+  };
+
+  const toggleVerified = async (brand: Brand) => {
+    setUpdatingId(brand.id);
+    const { error } = await supabase.from('brands').update({ verified: !brand.verified }).eq('id', brand.id);
+    if (error) { toast.error('Update failed: ' + error.message); }
+    else {
+      setBrands(prev => prev.map(b => b.id === brand.id ? { ...b, verified: !b.verified } : b));
+      toast.success(brand.verified ? 'Verification removed' : 'Brand verified');
+    }
+    setUpdatingId(null);
+  };
+
+  const filtered = brands.filter(b => {
+    const matchSearch = b.name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchStatus = statusFilter === 'all' || b.status === statusFilter;
+    return matchSearch && matchStatus;
   });
 
-  const handleViewProfile = (brand: any) => {
-    setSelectedBrand({
-      ...brand,
-      videos: brand.videoList || [],
-      products: brand.productList || []
-    });
-    setModalOpen(true);
+  const counts = {
+    all: brands.length,
+    pending: brands.filter(b => b.status === 'pending').length,
+    active: brands.filter(b => b.status === 'active').length,
+    suspended: brands.filter(b => b.status === 'suspended').length,
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white mb-2">Brands</h1>
-        <p className="text-gray-400">Manage brand accounts and view their profiles</p>
-      </div>
-
-      <div className="flex gap-4 mb-6">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-          <Input
-            placeholder="Search brands..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 bg-[#242424] border-gray-700 text-white"
-          />
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-white mb-1">Brands</h1>
+          <p className="text-gray-400">Approve and manage vendor brand accounts</p>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48 bg-[#242424] border-gray-700 text-white">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-[#242424] border-gray-700">
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="suspended">Suspended</SelectItem>
-          </SelectContent>
-        </Select>
+        <button onClick={fetchBrands} disabled={loading}
+          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-4 py-2 rounded-xl text-sm transition-all">
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          Refresh
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredBrands.map((brand) => (
-          <BrandCard 
-            key={brand.id} 
-            brand={brand} 
-            onViewProfile={() => handleViewProfile(brand)}
-          />
+      {fetchError && (
+        <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 text-red-400 text-sm">
+          <strong>Error:</strong> {fetchError}
+          <p className="text-red-400/60 text-xs mt-1">Make sure you ran <code>admin-fixes.sql</code> in Supabase SQL Editor.</p>
+        </div>
+      )}
+
+      <div className="flex gap-3 flex-wrap">
+        {(['all', 'pending', 'active', 'suspended'] as const).map(s => (
+          <button key={s} onClick={() => setStatusFilter(s)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium border transition-all ${
+              statusFilter === s
+                ? 'bg-cyan-500 text-white border-cyan-500'
+                : 'bg-gray-900 border-gray-700 text-gray-400 hover:text-white'
+            }`}>
+            {s === 'all' ? 'All' : s.charAt(0).toUpperCase() + s.slice(1)}
+            <span className={`ml-2 text-xs px-1.5 py-0.5 rounded-full ${statusFilter === s ? 'bg-white/20' : 'bg-gray-700'}`}>
+              {counts[s]}
+            </span>
+          </button>
         ))}
       </div>
 
-      {selectedBrand && (
-        <BrandProfileModal
-          open={modalOpen}
-          onClose={() => setModalOpen(false)}
-          brand={selectedBrand}
-        />
-      )}
+      <div className="relative max-w-md">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 w-4 h-4" />
+        <input type="text" placeholder="Search brands..." value={searchTerm}
+          onChange={e => setSearchTerm(e.target.value)}
+          className="w-full bg-gray-900 border border-gray-700 rounded-xl pl-9 pr-4 py-2.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-cyan-500" />
+      </div>
+
+      <div ref={containerRef} className="bg-gray-900 border border-gray-800 rounded-2xl overflow-hidden">
+        {loading ? (
+          <div className="p-12 flex flex-col items-center gap-3 text-gray-500">
+            <RefreshCw className="w-6 h-6 animate-spin" />
+            Loading brands...
+          </div>
+        ) : filtered.length === 0 ? (
+          <div className="p-16 text-center">
+            <p className="text-gray-400 font-medium text-lg">
+              {brands.length === 0 ? 'No brands have signed up yet' : 'No brands match your filter'}
+            </p>
+            <p className="text-gray-600 text-sm mt-2">
+              {brands.length === 0
+                ? 'Vendors sign up at /vendor — their brands appear here automatically.'
+                : 'Try clearing the search or changing the status filter.'}
+            </p>
+          </div>
+        ) : (
+          <>
+            <div className="hidden md:grid grid-cols-[2fr_1fr_1fr_1fr_130px_170px] gap-4 px-6 py-3 border-b border-gray-800 text-xs font-medium text-gray-500 uppercase tracking-wider">
+              <span>Brand</span><span>Category</span><span>Stripe</span>
+              <span>Subscribers</span><span>Verified</span><span>Status</span>
+            </div>
+            <div className="divide-y divide-gray-800">
+              {filtered.map(brand => {
+                const cfg = STATUS_CONFIG[brand.status];
+                const isUpdating = updatingId === brand.id;
+                return (
+                  <div key={brand.id} className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_1fr_130px_170px] gap-4 items-center px-6 py-4 hover:bg-gray-800/30 transition-colors">
+
+                    <div className="flex items-center gap-3">
+                      {brand.logo_url
+                        ? <img src={brand.logo_url} alt={brand.name} className="w-10 h-10 rounded-xl object-cover flex-shrink-0" />
+                        : <div className="w-10 h-10 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0 text-gray-400 font-bold text-sm">{brand.name.charAt(0).toUpperCase()}</div>
+                      }
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <p className="text-white text-sm font-semibold truncate">{brand.name}</p>
+                          {brand.verified && <BadgeCheck className="w-3.5 h-3.5 text-cyan-400 flex-shrink-0" />}
+                        </div>
+                        <p className="text-gray-700 text-xs font-mono mt-0.5">{new Date(brand.created_at).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+
+                    <span className="text-gray-400 text-sm">{brand.category || '—'}</span>
+
+                    {brand.stripe_onboarding_complete
+                      ? <span className="flex items-center gap-1.5 text-emerald-400 text-xs font-medium"><CheckCircle className="w-3.5 h-3.5" />Connected</span>
+                      : <span className="flex items-center gap-1.5 text-gray-500 text-xs"><XCircle className="w-3.5 h-3.5" />Not set up</span>
+                    }
+
+                    <span className="text-gray-400 text-sm">{brand.subscriber_count.toLocaleString()}</span>
+
+                    <button onClick={() => toggleVerified(brand)} disabled={isUpdating}
+                      className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg border transition-all w-fit ${
+                        brand.verified
+                          ? 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20 hover:bg-cyan-500/20'
+                          : 'text-gray-500 bg-gray-800 border-gray-700 hover:border-cyan-500/30 hover:text-cyan-400'
+                      }`}>
+                      <BadgeCheck className="w-3.5 h-3.5" />
+                      {brand.verified ? 'Verified' : 'Unverified'}
+                    </button>
+
+                    <div className="relative">
+                      <button disabled={isUpdating}
+                        onClick={e => { e.stopPropagation(); setOpenDropdown(openDropdown === brand.id ? null : brand.id); }}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-medium border w-full transition-all ${cfg.bg} ${isUpdating ? 'opacity-50' : 'cursor-pointer hover:opacity-80'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot} flex-shrink-0`} />
+                        {cfg.label}
+                        <ChevronDown className="w-3 h-3 ml-auto" />
+                      </button>
+
+                      {openDropdown === brand.id && (
+                        <div className="absolute right-0 top-full mt-1 w-36 bg-gray-900 border border-gray-700 rounded-xl shadow-2xl z-50 overflow-hidden">
+                          {(['active', 'pending', 'suspended'] as const).map(s => (
+                            <button key={s} onClick={() => updateStatus(brand.id, s)} disabled={brand.status === s}
+                              className={`w-full flex items-center gap-2 px-3 py-2.5 text-xs transition-colors hover:bg-gray-800 ${brand.status === s ? 'opacity-40 cursor-default' : 'cursor-pointer'}`}>
+                              <span className={`w-1.5 h-1.5 rounded-full ${STATUS_CONFIG[s].dot}`} />
+                              <span className={STATUS_CONFIG[s].bg.split(' ')[0]}>{STATUS_CONFIG[s].label}</span>
+                              {brand.status === s && <span className="ml-auto text-gray-600">current</span>}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
